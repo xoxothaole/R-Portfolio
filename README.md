@@ -78,5 +78,51 @@ rpart.plot(decisionTree_model)
 predicted_val <- predict(decisionTree_model, test_data, type = 'class')
 probability <- predict(decisionTree_model, test_data, type = 'prob')
 ```
+<p align="center">
+  <img src= "images/Model 5.png" alt="Model 5"/><br>
+  <em>I developed an interpretable decision tree to identify the specific transaction patterns that indicate fraud. Since the dataset uses anonymized variables (V1-V28) for privacy protection, the model reveals the mathematical patterns that distinguish fraudulent behavior, even though we can’t see the original transaction details. </em>
+</p>
+
+- Artifical Neural Network (ANN)
+```r
+library(neuralnet)
+ANN_model = neuralnet(Class~. , train_data, linear.output = FALSE)
+plot(ANN_model)
+
+predANN = compute(ANN_model, test_data)
+resultANN = predANN$net.result
+resultANN = ifelse(resultANN > 0.5, 1, 0)
+```
+<p align="center">
+  <img src= "images/Model 6.png" alt="Model 6"/><br>
+  <em>I used neural networks because they can detect subtle, interconnected patterns across all 29 transaction features the other models can’t. In this case, each connection represents a “weight” that the network learned during training. The network discovered which combinations of transaction features, when activated together, indicate fraudulent behavior. Unlike decision trees with clear rules, neural networks create complex mathematical relationships that can detect very subtle fraud signatures. </em>
+</p>
+
+### End Results and Reccomendations 
+- Model Performance (AUC Scores)
+```r
+# Calculate AUC for all models
+log_pred = predict(Logistic_Model, test_data, type = "response")
+log_auc = roc(test_data$Class, log_pred, quiet = TRUE)
+
+tree_pred_prob = predict(decisionTree_model, test_data, type = 'prob')[,2]
+tree_auc = roc(test_data$Class, tree_pred_prob, quiet = TRUE)
+
+ann_pred_prob = predANN$net.result
+ann_auc = roc(test_data$Class, ann_pred_prob, quiet = TRUE)
+
+# Compare all models
+models_performance = data.frame(
+  Model = c("Logistic Regression", "Decision Tree", "Neural Network", "GBM"),
+  AUC = round(c(auc(log_auc), auc(tree_auc), auc(ann_auc), auc(gbm_auc)), 4)
+)
+
+print("Model Performance Comparison:")
+print(models_performance)
+
+# Find best model
+best_model = models_performance[which.max(models_performance$AUC), ]
+print(paste("Winner:", best_model$Model, "with AUC of", best_model$AUC))
+```
 
 ### Dashboard
