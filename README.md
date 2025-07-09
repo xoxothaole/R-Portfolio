@@ -50,5 +50,33 @@ plot(Logistic_Model)
   <em>Model 1: Shows good model performance with random scatter around zero — indicating unbiased predictions.</em>
 </p>
 
+<p align="center">
+  <img src= "images/Model 2.png" alt="Model 2"/><br>
+  <em>Model 2: Q-Q plot demonstrates model residuals follow a normal distribution for the majority of cases, with deviation only in extreme values.</em>
+</p>
+
+<p align="center">
+  <img src= "images/Model 3.png" alt="Model 3"/><br>
+  <em>Model 3: Indicates consistent model variance across predicted values — demonstrates reliable performance regardless of transaction characteristics.</em>
+</p>
+
+<p align="center">
+  <img src= "images/Model 4.png" alt="Model 4"/><br>
+  <em>Model 4: Shows transactions that have large errors (high residuals) don’t disproportionately affect model training — ensuring stable performance.</em>
+</p>
+
+> <small> *Overall these diagnostic models confirms the model’s potential — displaying it’s reliability and consistent performance across diverse transaction patterns.* </small>
+
+- Decision Tree Model
+```r
+library(rpart)
+library(rpart.plot)
+decisionTree_model <- rpart(Class~. , train_data, method = 'class')
+
+rpart.plot(decisionTree_model)
+
+predicted_val <- predict(decisionTree_model, test_data, type = 'class')
+probability <- predict(decisionTree_model, test_data, type = 'prob')
+```
 
 ### Dashboard
