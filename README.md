@@ -39,5 +39,12 @@ dim(test_data)
 > <small>* *The 80/20 methodology ensures the 97.48% AUC score — representing genuine predictive capability on unseen data. This provides confidence for production deployment rather than overfitted training performance. I used stratified sampling to maintain the 0.17% fraud ratio across both data sets and set seeds makes the results reproducible for comparison and validation.* </small>
 
 - Logisitc Regression Model
-![Model 1] (
+```r
+Logistic_Model = glm(Class~., train_data, family = binomial())
+summary(Logistic_Model)
+
+plot(Logistic_Model)
+```
+![Model 1] (images/Model 1.png)
+
 ### Dashboard
