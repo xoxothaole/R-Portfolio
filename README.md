@@ -36,7 +36,7 @@ test_data = subset(NewData, data_sample == FALSE) # 20% for validation
 dim(train_data)
 dim(test_data)
 ```
-> <small>* *The 80/20 methodology ensures the 97.48% AUC score — representing genuine predictive capability on unseen data. This provides confidence for production deployment rather than overfitted training performance. I used stratified sampling to maintain the 0.17% fraud ratio across both data sets and set seeds makes the results reproducible for comparison and validation.* </small>
+>> <small>* *The 80/20 methodology ensures the 97.48% AUC score — representing genuine predictive capability on unseen data. This provides confidence for production deployment rather than overfitted training performance. I used stratified sampling to maintain the 0.17% fraud ratio across both data sets and set seeds makes the results reproducible for comparison and validation.* </small>
 
 - Logisitc Regression Model
 ```r
@@ -45,6 +45,10 @@ summary(Logistic_Model)
 
 plot(Logistic_Model)
 ```
-![Model 1] (images/Model 1.png)
+<p align="center">
+  <img src= "images/Model 1.png" alt="Model 1"/><br>
+  <em>Model 1: Shows good model performance with random scatter around zero — indicating unbiased predictions.</em>
+</p>
+
 
 ### Dashboard
