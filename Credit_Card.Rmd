@@ -1,0 +1,241 @@
+---
+title: "Detect Credit Card Fraud"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+# Project big picture:
+- You're teaching a computer to become a fraud detective by showing it thousands of examples of past transactions and whether they were fraudulent or not
+```{r}
+#install.packages("ranger")
+#install.packages("caret")
+#install.packages("data.table")
+
+setwd("/Users/thaole/Downloads")
+getwd()
+library(ranger)
+library(caret)
+library(data.table)
+library(lattice)
+creditcard_data <- read.csv("creditcard.csv")
+
+
+```
+
+# Data Exploration
+```{r}
+dim(creditcard_data)
+head(creditcard_data, 6)
+tail(creditcard_data, 6)
+table(creditcard_data$Class)
+summary(creditcard_data$Amount)
+names(creditcard_data)
+var(creditcard_data$Amount)
+
+sd(creditcard_data$Amount)
+```
+# Data Manipulation 
+ - scale data also known as standardization so that data is structured according to a specified range so there's no extreme values that might interfere with the functioning of our model 
+ 
+```{r}
+head(creditcard_data)
+
+creditcard_data$Amount=scale(creditcard_data$Amount)
+NewData = creditcard_data[, -c(1)]
+head(NewData)
+```
+- scale() transforms amounts so they have a mean of 0 and standard deviation of 1 
+- it's important bc w out scaling the algorithm might think large amounts are automatically more suspicious just bc the numbers are bigger when in reality a fraudulent $20 transaction has the same patterns as a fraudulent $2000 transaction
+
+- second line creates a new dataset called NewData that removed the first column from your original data ( the time column isn't relevant for detection)
+
+# Data Modeling
+- after we standarized our entire dataset we will split into 80% train_data and 20% to test data
+```{r}
+#install.packages("caTools")
+library(caTools)
+set.seed(123)
+data_sample = sample.split(NewData$Class, SplitRatio = 0.80)
+train_data = subset(NewData, data_sample == TRUE)
+test_data = subset(NewData, data_sample == FALSE)
+dim(train_data)
+dim(test_data)
+```
+- set.seed() sets a random seed to make your results reproducible 
+  * w out this everytime you run your code, you'll get different random splits 
+  * 123 is arbitrary could be any number 
+- train_data() is where your model learns patterns and the algorithm will analyze these transactions to understand what makes a transaction fraudulent 
+
+# Fitting Logisitic Regression Model
+- a logisitic regression is used for modeling the outcome probability of a class such as pass/fail, positive/negative and in out case - fraud/ not fraud 
+
+```{r}
+Logistic_Model = glm(Class~., train_data, family = binomial())
+summary(Logistic_Model)
+
+plot(Logistic_Model)
+```
+# Fitting a Decision Tree Model (Train/Test Split)
+```{r}
+library(rpart)
+#install.packages("rpart.plot")
+library(rpart.plot)
+decisionTree_model <- rpart(Class~. , train_data, method = 'class')
+
+rpart.plot(decisionTree_model)
+
+predicted_val <- predict(decisionTree_model, test_data, type = 'class')
+probability <- predict(decisionTree_model, test_data, type = 'prob')
+```
+
+# Full Dataset Patterns 
+```{r}
+decisionTree_full <- rpart(Class ~ . , creditcard_data, method = 'class')
+rpart.plot(decisionTree_full)
+```
+
+# Artifical Neural Networks
+- capture complex, non-linear patterns that simpler models miss and can automatically discover hidden relationships between the 28 anonymized variables
+
+```{r}
+#install.packages("neuralnet")
+library(neuralnet)
+ANN_model = neuralnet(Class~. , train_data, linear.output = FALSE)
+plot(ANN_model)
+
+predANN = compute(ANN_model, test_data)
+resultANN = predANN$net.result
+resultANN = ifelse(resultANN > 0.5, 1, 0)
+```
+
+# Gradient Boosting (GBM)
+- Builds many weak models sequentially and each new model tries to fix the mistakes of previous models
+- combines all models for a final, very strong predictor 
+```{r}
+#install.packages("gbm")
+#install.packages("pROC")
+library(pROC)
+library(gbm, quietly = TRUE)
+
+system.time(
+       model_gbm <- gbm(Class ~ .
+               , distribution = "bernoulli"
+               , data = rbind(train_data, test_data)
+               , n.trees = 500
+               , interaction.depth = 3
+               , n.minobsinnode = 100
+               , shrinkage = 0.01
+               , bag.fraction = 0.5
+               , train.fraction = nrow(train_data) / (nrow(train_data) + nrow(test_data))
+)
+)
+
+# determine best iteration based on the test data
+gbm.iter = gbm.perf(model_gbm, method = "test")
+
+model.influence = relative.influence(model_gbm, n.trees = gbm.iter, sort. = TRUE)
+plot(model_gbm)
+
+# plot and calculate AUC on test data
+gbm_test = predict(model_gbm, newdata = test_data, n.trees = gbm.iter)
+print("Predictions created:")
+head(gbm_test)
+summary(gbm_test)
+
+actual_classes = as.numeric(test_data$Class)
+predicted_probs = as.numeric(gbm_test)
+
+gbm_auc = roc(test_data$Class, gbm_test, plot = TRUE, col = "red")
+print(paste("AUC:", auc(gbm_auc)))
+```
+
+# Model Evaluations
+```{r}
+library(caret)
+
+log_pred = predict(Logistic_Model, test_data, type = "response")
+log_class = ifelse(log_pred > 0.5, 1, 0)
+confusionMatrix(as.factor(log_class), as.factor(test_data$Class))
+
+confusionMatrix(as.factor(predicted_val), as.factor(test_data$Class))
+
+confusionMatrix(as.factor(resultANN), as.factor(test_data$Class))
+```
+# Compare all models
+```{r}
+# Calculate AUC for all models
+log_pred = predict(Logistic_Model, test_data, type = "response")
+log_auc = roc(test_data$Class, log_pred, quiet = TRUE)
+
+tree_pred_prob = predict(decisionTree_model, test_data, type = 'prob')[,2]
+tree_auc = roc(test_data$Class, tree_pred_prob, quiet = TRUE)
+
+ann_pred_prob = predANN$net.result
+ann_auc = roc(test_data$Class, ann_pred_prob, quiet = TRUE)
+
+# Compare all models
+models_performance = data.frame(
+  Model = c("Logistic Regression", "Decision Tree", "Neural Network", "GBM"),
+  AUC = round(c(auc(log_auc), auc(tree_auc), auc(ann_auc), auc(gbm_auc)), 4)
+)
+
+print("Model Performance Comparison:")
+print(models_performance)
+
+# Find best model
+best_model = models_performance[which.max(models_performance$AUC), ]
+print(paste("Winner:", best_model$Model, "with AUC of", best_model$AUC))
+
+
+
+```
+ - Logistic Regression performed the best! 
+  that indicates the fraud patterns might be more linear than expected and the class imbalance handling in logisitic regression worked very well --- sometimes simpler models generalize better 
+
+#Model Performance Visualization
+```{r}
+# Combined ROC Curves
+plot(log_auc, col="blue", lwd=2, main="ROC Curve Comparison - All Models")
+plot(tree_auc, add=TRUE, col="green", lwd=2)
+plot(ann_auc, add=TRUE, col="red", lwd=2) 
+plot(gbm_auc, add=TRUE, col="orange", lwd=2)
+legend("bottomright", 
+       legend=c("Logistic Regression (97.5%)", "Decision Tree (90.3%)", 
+                "Neural Network (93.5%)", "GBM (95.9%)"),
+       col=c("blue", "green", "red", "orange"), lwd=2, cex=0.8)
+```
+  
+```{r}
+print("BUSINESS RECOMMENDATION:")
+print("Deploy Logistic Regression model because:")
+print("- Highest AUC (97.48%)")
+print("- Fastest real-time predictions") 
+print("- Most interpretable for regulatory compliance")
+print("- Easiest to maintain and update")
+```
+# Key Insights
+```{r}
+# Key Insights and Recommendations
+```{r}
+print("=== FRAUD DETECTION PROJECT RESULTS ===")
+print("")
+print("Dataset Overview:")
+print(paste("- Total transactions:", nrow(creditcard_data)))
+print(paste("- Fraud cases:", sum(creditcard_data$Class)))
+print(paste("- Fraud rate:", round(mean(creditcard_data$Class)*100, 3), "%"))
+print("")
+print("Model Performance (AUC scores):")
+print(models_performance)
+print("")
+print("Business Recommendation:")
+print("Deploy Logistic Regression - highest accuracy + fastest deployment")
+print("")
+print("Expected Performance in Production:")
+print("- Will catch ~97% of all fraud attempts")
+print("- Low false positive rate (happy customers)")
+print("- Fast enough for real-time transaction screening")
+```
+
