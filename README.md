@@ -124,5 +124,51 @@ print(models_performance)
 best_model = models_performance[which.max(models_performance$AUC), ]
 print(paste("Winner:", best_model$Model, "with AUC of", best_model$AUC))
 ```
+<p align="center">
+  <img src= "images/Table 1.png" alt="Table 1"/><br>
+</p>
+
+```r 
+# Combined ROC Curves
+plot(log_auc, col="blue", lwd=2, main="ROC Curve Comparison - All Models")
+plot(tree_auc, add=TRUE, col="green", lwd=2)
+plot(ann_auc, add=TRUE, col="red", lwd=2) 
+plot(gbm_auc, add=TRUE, col="orange", lwd=2)
+legend("bottomright", 
+       legend=c("Logistic Regression (97.5%)", "Decision Tree (90.3%)", 
+                "Neural Network (93.5%)", "GBM (95.9%)"),
+       col=c("blue", "green", "red", "orange"), lwd=2, cex=0.8)
+```
+<p align="center">
+  <img src= "images/Model 8.png" alt="Model 1"/><br>
+</p>
+
+1. **Logistic Regression (97.48%) - fast, interpretable, linear patterns**
+2. **Gradient Boosting (95.92%) - complex ensemble, slower inference** 
+3. **Neural Network (93.50%) - non-linear patterns, black box**
+4. **Decision Tree (90.28%) - highly interpretable, simple rules**
+
+### Key Findings
+- Linear patterns dominate → simpler models outperformed complex ones
+- Class imbalance handled successfully → all models >90% AUC despite 0.17% fraud rate
+- Feature importance → V17, V14, V12 identified as primary fraud indicators
+- Reproducible results → consistent performance across train/test splits
+
+### Business Recommendations
+- **Deploy logistic regression model -**
+    - Superior accuracy with minimal computational overhead
+    - Explanatory predictions for regulatory compliance
+    - Millisecond predictions for real-time processing
+    - Simple architecture and easy updates → simple maintenance/ retraining
+    - Lower computational requirements → Cost effective
+
+### Model Monitoring Strategy
+- Weekly AUC performance tracking
+- Monthly retraining with new data
+- Threshold optimization based on precision/recall trade-offs
+- A/B testing framework for model updates
+
+### **Conclusion**
+Leveraging real-world European transaction data, this end-to-end fraud detection initiative achieved a 97.48% AUC and demonstrated my command of the full machine learning lifecycle. I evaluated four approaches—logistic regression, decision trees, neural networks, and gradient boosting—and found that a well-tuned logistic regression outperformed the more complex models. By addressing class imbalance, engineering features for maximum signal, and prioritizing model interpretability, I delivered production-ready workflows spanning data preprocessing, model development, performance evaluation, and clear business recommendations. This project reinforced that deep data understanding and rigorous validation often trump flashy techniques—and showcased my ability to tackle real-world machine learning challenges.
 
 ### Dashboard
